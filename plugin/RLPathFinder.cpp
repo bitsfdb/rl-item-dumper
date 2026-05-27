@@ -22,6 +22,16 @@ static bool IsRLRoot(const std::filesystem::path& p) {
 }
 
 std::filesystem::path FindRocketLeaguePath() {
+    // Best source: we ARE RocketLeague.exe, so ask Windows for our own path.
+    // Exe is at <root>/Binaries/Win64/RocketLeague.exe — go up two levels.
+    {
+        wchar_t exePath[MAX_PATH] = {};
+        if (GetModuleFileNameW(nullptr, exePath, MAX_PATH)) {
+            auto root = std::filesystem::path(exePath).parent_path().parent_path().parent_path();
+            if (IsRLRoot(root)) return root;
+        }
+    }
+    // Steam registry
     {
         auto steamPath = ReadRegString(HKEY_LOCAL_MACHINE,
             L"SOFTWARE\\WOW6432Node\\Valve\\Steam", L"InstallPath");
@@ -30,6 +40,7 @@ std::filesystem::path FindRocketLeaguePath() {
             if (IsRLRoot(rl)) return rl;
         }
     }
+    // Epic uninstall registry
     {
         auto epicPath = ReadRegString(HKEY_LOCAL_MACHINE,
             L"SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Rocket League",
@@ -42,12 +53,15 @@ std::filesystem::path FindRocketLeaguePath() {
             L"InstallLocation");
         if (IsRLRoot(epicPath)) return epicPath;
     }
+    // Common hardcoded paths
     for (auto& p : {
         std::filesystem::path("C:/Program Files/Epic Games/rocketleague"),
         std::filesystem::path("C:/Program Files (x86)/Steam/steamapps/common/rocketleague"),
         std::filesystem::path("D:/Program Files (x86)/Steam/steamapps/common/rocketleague"),
         std::filesystem::path("D:/SteamLibrary/steamapps/common/rocketleague"),
         std::filesystem::path("C:/SteamLibrary/steamapps/common/rocketleague"),
+        std::filesystem::path("E:/Games/rocketleague"),
+        std::filesystem::path("E:/SteamLibrary/steamapps/common/rocketleague"),
     }) {
         if (IsRLRoot(p)) return p;
     }

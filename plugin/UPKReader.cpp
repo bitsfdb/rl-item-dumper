@@ -30,6 +30,45 @@ static std::vector<uint8_t> HexToBytes(const std::string& hex) {
     return out;
 }
 
+static std::vector<uint8_t> Base64ToBytes(const std::string& b64) {
+    static const int8_t T[256] = {
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,62,-1,-1,-1,63,
+        52,53,54,55,56,57,58,59,60,61,-1,-1,-1,-1,-1,-1,
+        -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,
+        15,16,17,18,19,20,21,22,23,24,25,-1,-1,-1,-1,-1,
+        -1,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,
+        41,42,43,44,45,46,47,48,49,50,51,-1,-1,-1,-1,-1,
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1
+    };
+    std::vector<uint8_t> out;
+    uint32_t buf = 0; int bits = 0;
+    for (unsigned char c : b64) {
+        if (c == '=') break;
+        int8_t v = T[c];
+        if (v < 0) continue;
+        buf = (buf << 6) | (uint8_t)v;
+        bits += 6;
+        if (bits >= 8) { bits -= 8; out.push_back((uint8_t)(buf >> bits)); buf &= (1u << bits) - 1; }
+    }
+    return out;
+}
+
+static bool IsBase64(const std::string& s) {
+    // Base64 strings contain +, /, or = which hex strings never do
+    for (char c : s)
+        if (c == '+' || c == '/' || c == '=') return true;
+    return false;
+}
+
 static bool AesEcbDecrypt(std::vector<uint8_t>& data, const std::vector<uint8_t>& key) {
     if (key.size() != 16 && key.size() != 24 && key.size() != 32) return false;
     size_t paddedSize = (data.size() + 15) & ~(size_t)15;
@@ -261,8 +300,8 @@ std::vector<std::vector<uint8_t>> LoadKeys(const std::filesystem::path& keysFile
     std::string line;
     while (std::getline(f, line)) {
         if (line.empty() || line[0] == '#') continue;
-        line.erase(std::remove_if(line.begin(), line.end(), ::isspace), line.end());
-        auto key = HexToBytes(line);
+        line.erase(std::remove_if(line.begin(), line.end(), [](unsigned char c){ return c == '\r' || c == '\n'; }), line.end());
+        auto key = IsBase64(line) ? Base64ToBytes(line) : HexToBytes(line);
         if (key.size() == 16 || key.size() == 24 || key.size() == 32)
             result.push_back(std::move(key));
     }

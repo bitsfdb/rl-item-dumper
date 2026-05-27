@@ -1,0 +1,16 @@
+plugin/build/
+plugin/.vs/
+*.user
+*.suo
+*.VC.db
+*.VC.opendb
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.dll
+*.pdb
+*.ilk
+*.exp
+*.lib
+!pluginsdk.lib

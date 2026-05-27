@@ -15,6 +15,21 @@ add_library(ItemDumper SHARED
     TextureExtractor.cpp
     JsonBuilder.cpp
     third_party/miniz.c
+    third_party/miniz_tdef.c
+    third_party/miniz_tinfl.c
+    third_party/miniz_zip.c
+)
+
+# Force miniz C files to compile as C (not C++) to avoid name mangling
+# and exclude them from the PCH (PCH is C++ only)
+set_source_files_properties(
+    third_party/miniz.c
+    third_party/miniz_tdef.c
+    third_party/miniz_tinfl.c
+    third_party/miniz_zip.c
+    PROPERTIES
+        LANGUAGE C
+        SKIP_PRECOMPILE_HEADERS ON
 )
 
 target_precompile_headers(ItemDumper PRIVATE pch.h)
